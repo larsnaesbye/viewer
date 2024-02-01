@@ -47,6 +47,8 @@
  */
 
 #define TERRAIN_PBR_DETAIL_EMISSIVE 0
+#define TERRAIN_PBR_DETAIL_OCCLUSION -1
+#define TERRAIN_PBR_DETAIL_NORMAL -2
 
 in vec3 vary_vertex_normal;
 
@@ -75,8 +77,14 @@ vec3 srgb_to_linear(vec3 c);
 struct PBRMix
 {
     vec4 col;       // RGB color with alpha, linear space
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_OCCLUSION)
     vec3 orm;       // Occlusion, roughness, metallic
+#else
+    vec2 rm;        // Roughness, metallic
+#endif
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
     vec3 vNt;       // Unpacked normal texture sample, vector
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
     vec3 emissive;  // RGB emissive color, linear space
 #endif
@@ -86,8 +94,14 @@ PBRMix init_pbr_mix()
 {
     PBRMix mix;
     mix.col = vec4(0);
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_OCCLUSION)
     mix.orm = vec3(0);
+#else
+    mix.rm = vec2(0);
+#endif
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
     mix.vNt = vec3(0);
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
     mix.emissive = vec3(0);
 #endif
@@ -105,8 +119,14 @@ PBRMix mix_pbr(PBRMix mix1, PBRMix mix2, float mix2_weight)
 {
     PBRMix mix;
     mix.col      = mix1.col      + (mix2.col      * mix2_weight);
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_OCCLUSION)
     mix.orm      = mix1.orm      + (mix2.orm      * mix2_weight);
+#else
+    mix.rm       = mix1.rm       + (mix2.rm       * mix2_weight);
+#endif
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
     mix.vNt      = mix1.vNt      + (mix2.vNt      * mix2_weight);
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
     mix.emissive = mix1.emissive + (mix2.emissive * mix2_weight);
 #endif
@@ -117,7 +137,9 @@ PBRMix sample_pbr(
     vec2 uv
     , sampler2D tex_col
     , sampler2D tex_orm
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
     , sampler2D tex_vNt
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
     , sampler2D tex_emissive
 #endif
@@ -126,8 +148,14 @@ PBRMix sample_pbr(
     PBRMix mix;
     mix.col = texture(tex_col, uv);
     mix.col.rgb = srgb_to_linear(mix.col.rgb);
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_OCCLUSION)
     mix.orm = texture(tex_orm, uv).xyz;
+#else
+    mix.rm = texture(tex_orm, uv).yz;
+#endif
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
     mix.vNt = texture(tex_vNt, uv).xyz*2.0-1.0;
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
     mix.emissive = srgb_to_linear(texture(tex_emissive, uv).xyz);
 #endif
@@ -255,7 +283,9 @@ PBRMix terrain_sample_pbr(
     , TerrainTriplanar tw
     , sampler2D tex_col
     , sampler2D tex_orm
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
     , sampler2D tex_vNt
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
     , sampler2D tex_emissive
 #endif
@@ -273,13 +303,17 @@ PBRMix terrain_sample_pbr(
             get_uv_x()
             , tex_col
             , tex_orm
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
             , tex_vNt
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
             , tex_emissive
 #endif
             );
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
         // Triplanar-specific normal texture fix
         mix_x.vNt = _t_normal_post_x(mix_x.vNt);
+#endif
         mix = mix_pbr(mix, mix_x, tw.weight.x);
         break;
     default:
@@ -293,13 +327,17 @@ PBRMix terrain_sample_pbr(
             get_uv_y()
             , tex_col
             , tex_orm
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
             , tex_vNt
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
             , tex_emissive
 #endif
             );
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
         // Triplanar-specific normal texture fix
         mix_y.vNt = _t_normal_post_y(mix_y.vNt);
+#endif
         mix = mix_pbr(mix, mix_y, tw.weight.y);
         break;
     default:
@@ -313,14 +351,18 @@ PBRMix terrain_sample_pbr(
             get_uv_z()
             , tex_col
             , tex_orm
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
             , tex_vNt
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
             , tex_emissive
 #endif
             );
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
         // Triplanar-specific normal texture fix
         // *NOTE: Bottom face has not been tested
         mix_z.vNt = _t_normal_post_z(mix_z.vNt);
+#endif
         mix = mix_pbr(mix, mix_z, tw.weight.z);
         break;
     default:
@@ -341,7 +383,11 @@ PBRMix terrain_sample_pbr(
 PBRMix multiply_factors_pbr(
     PBRMix mix_in
     , vec4 factor_col
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_OCCLUSION)
     , vec3 factor_orm
+#else
+    , vec2 factor_rm
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
     , vec3 factor_emissive
 #endif
@@ -349,7 +395,11 @@ PBRMix multiply_factors_pbr(
 {
     PBRMix mix = mix_in;
     mix.col *= factor_col;
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_OCCLUSION)
     mix.orm *= factor_orm;
+#else
+    mix.rm *= factor_rm;
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
     mix.emissive *= factor_emissive;
 #endif
@@ -360,12 +410,18 @@ PBRMix terrain_sample_and_multiply_pbr(
     TerrainCoord terrain_coord
     , sampler2D tex_col
     , sampler2D tex_orm
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
     , sampler2D tex_vNt
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
     , sampler2D tex_emissive
 #endif
     , vec4 factor_col
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_OCCLUSION)
     , vec3 factor_orm
+#else
+    , vec2 factor_rm
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
     , vec3 factor_emissive
 #endif
@@ -377,8 +433,14 @@ PBRMix terrain_sample_and_multiply_pbr(
         , _t_triplanar()
 #endif
         , tex_col
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_OCCLUSION)
         , tex_orm
+#else
+        , tex_rm
+#endif
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
         , tex_vNt
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
         , tex_emissive
 #endif
@@ -386,7 +448,11 @@ PBRMix terrain_sample_and_multiply_pbr(
 
     mix = multiply_factors_pbr(mix
         , factor_col
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_OCCLUSION)
         , factor_orm
+#else
+        , factor_rm
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
         , factor_emissive
 #endif

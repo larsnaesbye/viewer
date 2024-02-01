@@ -26,6 +26,8 @@
 /*[EXTRA_CODE_HERE]*/
 
 #define TERRAIN_PBR_DETAIL_EMISSIVE 0
+#define TERRAIN_PBR_DETAIL_OCCLUSION -1
+#define TERRAIN_PBR_DETAIL_NORMAL -2
 
 #if TERRAIN_PLANAR_TEXTURE_SAMPLE_COUNT == 3
 #define TerrainCoord vec4[2]
@@ -51,8 +53,14 @@ TerrainMix get_terrain_mix_weights(float alpha1, float alpha2, float alphaFinal)
 struct PBRMix
 {
     vec4 col;       // RGB color with alpha, linear space
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_OCCLUSION)
     vec3 orm;       // Occlusion, roughness, metallic
+#else
+    vec2 rm;        // Roughness, metallic
+#endif
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
     vec3 vNt;       // Unpacked normal texture sample, vector
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
     vec3 emissive;  // RGB emissive color, linear space
 #endif
@@ -64,12 +72,18 @@ PBRMix terrain_sample_and_multiply_pbr(
     TerrainCoord terrain_coord
     , sampler2D tex_col
     , sampler2D tex_orm
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
     , sampler2D tex_vNt
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
     , sampler2D tex_emissive
 #endif
     , vec4 factor_col
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_OCCLUSION)
     , vec3 factor_orm
+#else
+    , vec2 factor_rm
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
     , vec3 factor_emissive
 #endif
@@ -81,17 +95,17 @@ out vec4 frag_data[4];
 
 uniform sampler2D alpha_ramp;
 
-// *TODO: More configurable quality level which disables PBR features on machines
-// with limited texture availability
 // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#additional-textures
 uniform sampler2D detail_0_base_color;
 uniform sampler2D detail_1_base_color;
 uniform sampler2D detail_2_base_color;
 uniform sampler2D detail_3_base_color;
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
 uniform sampler2D detail_0_normal;
 uniform sampler2D detail_1_normal;
 uniform sampler2D detail_2_normal;
 uniform sampler2D detail_3_normal;
+#endif
 uniform sampler2D detail_0_metallic_roughness;
 uniform sampler2D detail_1_metallic_roughness;
 uniform sampler2D detail_2_metallic_roughness;
@@ -159,12 +173,18 @@ void main()
             terrain_texcoord
             , detail_0_base_color
             , detail_0_metallic_roughness
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
             , detail_0_normal
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
             , detail_0_emissive
 #endif
             , baseColorFactors[0]
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_OCCLUSION)
             , orm_factors[0]
+#else
+            , rm_factors[0]
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
             , emissiveColors[0]
 #endif
@@ -181,12 +201,18 @@ void main()
             terrain_texcoord
             , detail_1_base_color
             , detail_1_metallic_roughness
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
             , detail_1_normal
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
             , detail_1_emissive
 #endif
             , baseColorFactors[1]
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_OCCLUSION)
             , orm_factors[1]
+#else
+            , rm_factors[1]
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
             , emissiveColors[1]
 #endif
@@ -203,12 +229,18 @@ void main()
             terrain_texcoord
             , detail_2_base_color
             , detail_2_metallic_roughness
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
             , detail_2_normal
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
             , detail_2_emissive
 #endif
             , baseColorFactors[2]
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_OCCLUSION)
             , orm_factors[2]
+#else
+            , rm_factors[2]
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
             , emissiveColors[2]
 #endif
@@ -225,12 +257,18 @@ void main()
             terrain_texcoord
             , detail_3_base_color
             , detail_3_metallic_roughness
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
             , detail_3_normal
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
             , detail_3_emissive
 #endif
             , baseColorFactors[3]
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_OCCLUSION)
             , orm_factors[3]
+#else
+            , rm_factors[3]
+#endif
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
             , emissiveColors[3]
 #endif
@@ -248,6 +286,7 @@ void main()
     }
     float base_color_factor_alpha = terrain_mix(tm, vec4(baseColorFactors[0].z, baseColorFactors[1].z, baseColorFactors[2].z, baseColorFactors[3].z));
 
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_NORMAL)
     // from mikktspace.com
     vec3 vNt = mix.vNt;
     vec3 vN = vary_normal;
@@ -257,6 +296,10 @@ void main()
     vec3 tnorm = normalize( vNt.x * vT + vNt.y * vB + vNt.z * vN );
 
     tnorm *= gl_FrontFacing ? 1.0 : -1.0;
+#else
+    vec3 tnorm = vary_normal;
+    tnorm *= gl_FrontFacing ? 1.0 : -1.0;
+#endif
    
 
 #if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_EMISSIVE)
@@ -264,8 +307,13 @@ void main()
 #else
 #define emissive vec3(0)
 #endif
+#if (TERRAIN_PBR_DETAIL >= TERRAIN_PBR_DETAIL_OCCLUSION)
+#define orm mix.orm
+#else
+#define orm vec3(1.0, mix.rm)
+#endif
     frag_data[0] = max(vec4(mix.col.xyz, 0.0), vec4(0));                                                   // Diffuse
-    frag_data[1] = max(vec4(mix.orm.rgb, base_color_factor_alpha), vec4(0));                                    // PBR linear packed Occlusion, Roughness, Metal.
+    frag_data[1] = max(vec4(orm.rgb, base_color_factor_alpha), vec4(0));                                    // PBR linear packed Occlusion, Roughness, Metal.
     frag_data[2] = max(vec4(encode_normal(tnorm), base_color_factor_alpha, GBUFFER_FLAG_HAS_PBR), vec4(0)); // normal, environment intensity, flags
     frag_data[3] = max(vec4(emissive,0), vec4(0));                                                // PBR sRGB Emissive
 }

@@ -289,7 +289,9 @@ enum TerrainPBRDetail : S32
     TERRAIN_PBR_DETAIL_MAX            = 0,
     TERRAIN_PBR_DETAIL_EMISSIVE       = 0,
     TERRAIN_PBR_DETAIL_OCCLUSION      = -1,
-    TERRAIN_PBR_DETAIL_MIN            = -1,
+    TERRAIN_PBR_DETAIL_NORMAL         = -2,
+    TERRAIN_PBR_DETAIL_BASE_COLOR     = -3,
+    TERRAIN_PBR_DETAIL_MIN            = -3,
 };
 extern LLGLSLShader         gDeferredPBRTerrainProgram;
 #endif
