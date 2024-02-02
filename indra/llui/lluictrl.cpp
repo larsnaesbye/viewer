@@ -119,6 +119,7 @@ LLUICtrl::LLUICtrl(const LLUICtrl::Params& p, const LLViewModelPtr& viewmodel)
 	mRightMouseDownSignal(NULL),
 	mRightMouseUpSignal(NULL),
 	mDoubleClickSignal(NULL),
+	mDragAndDropSignal(NULL),
 	mTransparencyType(TT_DEFAULT)
 {
 }
@@ -259,6 +260,7 @@ LLUICtrl::~LLUICtrl()
 	delete mRightMouseDownSignal;
 	delete mRightMouseUpSignal;
 	delete mDoubleClickSignal;
+	delete mDragAndDropSignal;
 }
 
 void default_commit_handler(LLUICtrl* ctrl, const LLSD& param)
@@ -341,7 +343,7 @@ void LLUICtrl::onMouseLeave(S32 x, S32 y, MASK mask)
 	}
 }
 
-//virtual 
+// virtual 
 BOOL LLUICtrl::handleMouseDown(S32 x, S32 y, MASK mask)
 {
 
@@ -361,7 +363,7 @@ BOOL LLUICtrl::handleMouseDown(S32 x, S32 y, MASK mask)
 	return handled;
 }
 
-//virtual
+// virtual
 BOOL LLUICtrl::handleMouseUp(S32 x, S32 y, MASK mask)
 {
 
@@ -381,7 +383,7 @@ BOOL LLUICtrl::handleMouseUp(S32 x, S32 y, MASK mask)
 	return handled;
 }
 
-//virtual
+// virtual
 BOOL LLUICtrl::handleRightMouseDown(S32 x, S32 y, MASK mask)
 {
 	BOOL handled  = LLView::handleRightMouseDown(x,y,mask);
@@ -392,7 +394,7 @@ BOOL LLUICtrl::handleRightMouseDown(S32 x, S32 y, MASK mask)
 	return handled;
 }
 
-//virtual
+// virtual
 BOOL LLUICtrl::handleRightMouseUp(S32 x, S32 y, MASK mask)
 {
 	BOOL handled  = LLView::handleRightMouseUp(x,y,mask);
@@ -403,6 +405,7 @@ BOOL LLUICtrl::handleRightMouseUp(S32 x, S32 y, MASK mask)
 	return handled;
 }
 
+// virtual
 BOOL LLUICtrl::handleDoubleClick(S32 x, S32 y, MASK mask)
 {
 	BOOL handled = LLView::handleDoubleClick(x, y, mask);
@@ -413,13 +416,26 @@ BOOL LLUICtrl::handleDoubleClick(S32 x, S32 y, MASK mask)
 	return handled;
 }
 
+// virtual
+BOOL LLUICtrl::handleDragAndDrop(S32 x, S32 y, MASK mask, BOOL drop, EDragAndDropType cargo_type,
+    void* cargo_data, EAcceptance* accept, std::string& tooltip_msg)
+{
+    if (mDragAndDropSignal)
+    {
+        if ((*mDragAndDropSignal)(this, x, y, mask, drop, cargo_type, cargo_data, accept, tooltip_msg))
+            return TRUE;
+    }
+    return LLView::handleDragAndDrop(x, y, mask, drop, cargo_type, cargo_data, accept, tooltip_msg);
+}
+
+// virtual
 // can't tab to children of a non-tab-stop widget
 BOOL LLUICtrl::canFocusChildren() const
 {
 	return hasTabStop();
 }
 
-
+// virtual
 void LLUICtrl::onCommit()
 {
 	if (mCommitSignal)
@@ -1133,6 +1149,13 @@ boost::signals2::connection LLUICtrl::setDoubleClickCallback( const mouse_signal
 	if (!mDoubleClickSignal) mDoubleClickSignal = new mouse_signal_t();
 
 	return mDoubleClickSignal->connect(cb); 
+}
+
+boost::signals2::connection LLUICtrl::setDragAndDropCallback( const dad_signal_t::slot_type& cb )
+{ 
+	if (!mDragAndDropSignal) mDragAndDropSignal = new dad_signal_t();
+
+	return mDragAndDropSignal->connect(cb);
 }
 
 void LLUICtrl::addInfo(LLSD & info)

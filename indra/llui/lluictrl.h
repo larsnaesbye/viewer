@@ -54,6 +54,11 @@ public:
 	typedef boost::function<bool (LLUICtrl* ctrl, const LLSD& param)> enable_callback_t;
 	typedef boost::signals2::signal<bool (LLUICtrl* ctrl, const LLSD& param), boost_boolean_combiner> enable_signal_t;
 	
+	typedef boost::function<bool (LLUICtrl* ctrl, S32 x, S32 y, MASK mask, BOOL drop, EDragAndDropType cargo_type,
+		void* cargo_data, EAcceptance* accept, std::string& tooltip_msg)> dad_callback_t;
+	typedef boost::signals2::signal<bool (LLUICtrl* ctrl, S32 x, S32 y, MASK mask, BOOL drop, EDragAndDropType cargo_type,
+		void* cargo_data, EAcceptance* accept, std::string& tooltip_msg), boost_boolean_combiner> dad_signal_t;
+	
 	struct CallbackParam : public LLInitParam::Block<CallbackParam>
 	{
 		Ignored					name;
@@ -160,6 +165,8 @@ public:
 	/*virtual*/ BOOL	handleRightMouseDown(S32 x, S32 y, MASK mask) override;
 	/*virtual*/ BOOL	handleRightMouseUp(S32 x, S32 y, MASK mask) override;
 	/*virtual*/ BOOL	handleDoubleClick(S32 x, S32 y, MASK mask) override;
+	/*virtual*/ BOOL	handleDragAndDrop(S32 x, S32 y, MASK mask, BOOL drop, EDragAndDropType cargo_type,
+		void* cargo_data, EAcceptance* accept, std::string& tooltip_msg) override;
 
 	// From LLFocusableElement
 	/*virtual*/ void	setFocus( BOOL b ) override;
@@ -254,6 +261,7 @@ public:
 	boost::signals2::connection setRightMouseUpCallback( const mouse_signal_t::slot_type& cb );
 	
 	boost::signals2::connection setDoubleClickCallback( const mouse_signal_t::slot_type& cb );
+	boost::signals2::connection setDragAndDropCallback( const dad_signal_t::slot_type& cb );
 
 	// *TODO: Deprecate; for backwards compatability only:
 	boost::signals2::connection setCommitCallback( boost::function<void (LLUICtrl*,void*)> cb, void* data);	
@@ -292,14 +300,15 @@ protected:
 
 	commit_signal_t*		mMouseEnterSignal;
 	commit_signal_t*		mMouseLeaveSignal;
-	
+
 	mouse_signal_t*		mMouseDownSignal;
 	mouse_signal_t*		mMouseUpSignal;
 	mouse_signal_t*		mRightMouseDownSignal;
 	mouse_signal_t*		mRightMouseUpSignal;
 
 	mouse_signal_t*		mDoubleClickSignal;
-	
+	dad_signal_t*		mDragAndDropSignal;
+
     LLViewModelPtr  mViewModel;
 
 	LLControlVariable* mControlVariable;
